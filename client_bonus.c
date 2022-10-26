@@ -1,22 +1,39 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   client.c                                           :+:      :+:    :+:   */
+/*   client_bonus.c                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: ymohamed <ymohamed@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/10/22 13:15:23 by ymohamed          #+#    #+#             */
-/*   Updated: 2022/10/26 13:19:57 by ymohamed         ###   ########.fr       */
+/*   Updated: 2022/10/26 12:31:30 by ymohamed         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "server_client.h"
+#include "server_client_bonus.h"
+
+static void	message_decipher(int sig)
+{
+	(void) sig;
+}
+
+static int	aknowledge_receive(int *total_sent)
+{
+	struct sigaction	sa;
+
+	sa.sa_handler = &message_decipher;
+	sigaction(SIGUSR1, &sa, NULL);
+	pause();
+	(*total_sent)++;
+	return (0);
+}
 
 static void	send_bit(unsigned char bit, int pid)
 {
 	int	back_sig;
 
 	back_sig = 0;
+	usleep(40);
 	if (bit == 0)
 		back_sig = kill(pid, SIGUSR1);
 	else if (bit == 1)
@@ -26,12 +43,12 @@ static void	send_bit(unsigned char bit, int pid)
 		ft_printf("Could not get to the specified pid\nExiting\n");
 		exit(0);
 	}
-	usleep(60);
 }
 
 static void	cipher_send_msg(char *str, int pid)
 {
 	unsigned char	mask;
+	static int		total_sent;
 	int				byte_cnt;
 	int				i;
 
@@ -43,7 +60,11 @@ static void	cipher_send_msg(char *str, int pid)
 		send_bit(str[i] & mask, pid);
 		while (++byte_cnt < 8)
 			send_bit((str[i] >> byte_cnt) & mask, pid);
+		aknowledge_receive(&total_sent);
+		usleep(40);
 	}
+	ft_printf("total byte send is %d\n", total_sent);
+	usleep(40);
 }
 
 int	main(int argc, char **argv)

@@ -1,23 +1,31 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   server.c                                           :+:      :+:    :+:   */
+/*   server_bonus.c                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: ymohamed <ymohamed@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/10/22 13:15:54 by ymohamed          #+#    #+#             */
-/*   Updated: 2022/10/26 13:14:12 by ymohamed         ###   ########.fr       */
+/*   Updated: 2022/10/26 12:31:18 by ymohamed         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "server_client.h"
+#include "server_client_bonus.h"
 
-static void	message_decipher(int sig)
+static int	aknowledge_received(int pid)
+{
+	usleep(80);
+	kill(pid, SIGUSR1);
+	return (0);
+}
+
+static void	message_decipher(int sig, siginfo_t *info, void *context)
 {
 	static unsigned char	byte;
 	static int				shift;
 	unsigned char			mask;
 
+	(void)context;
 	mask = 1;
 	if (sig == SIGUSR1)
 		shift++;
@@ -33,15 +41,22 @@ static void	message_decipher(int sig)
 		write(1, &byte, 1);
 		byte = '\0';
 		shift = 0;
+		aknowledge_received(info->si_pid);
 	}
 }
 
 int	main(void)
 {
+	struct sigaction	sa;
+
+	sa.sa_flags = SA_SIGINFO;
+	sa.sa_sigaction = message_decipher;
 	ft_printf("Server PID is: %d\n", getpid());
-	signal(SIGUSR1, &message_decipher);
-	signal(SIGUSR2, &message_decipher);
 	while (1)
+	{
+		sigaction(SIGUSR1, &sa, NULL);
+		sigaction(SIGUSR2, &sa, NULL);
 		pause();
+	}
 	return (0);
 }
